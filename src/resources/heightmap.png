@@ -1,0 +1,14 @@
+# Heightmap Image Placeholder
+
+This file should be replaced with an actual PNG heightmap image.
+
+You can create a heightmap by:
+1. Using a grayscale image where white = high elevation, black = low elevation
+2. Using online heightmap generators
+3. Creating one in image editing software like GIMP or Photoshop
+4. Using procedural generation tools
+
+For testing, you can use any grayscale image or the procedural terrain option in the TerrainGenerator class.
+
+Recommended dimensions: 256x256 or 512x512 pixels
+Format: PNG (grayscale) 

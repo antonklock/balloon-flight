@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { GradientMaterial } from "./materials/GradientMaterial";
+import { TerrainGenerator } from "./terrain/TerrainGenerator";
 import Stats from "three/examples/jsm/libs/stats.module";
 
 // Scene setup
@@ -9,6 +10,9 @@ const scene = new THREE.Scene();
 // Create gradient background
 const gradientBackground = new GradientMaterial();
 gradientBackground.addToScene(scene);
+
+// Initialize terrain generator
+const terrainGenerator = new TerrainGenerator(scene);
 
 // Setup rotation slider
 const rotationSlider = document.getElementById(
@@ -86,7 +90,7 @@ const camera = new THREE.PerspectiveCamera(
   75,
   window.innerWidth / window.innerHeight,
   0.1,
-  1000
+  5000
 );
 const renderer = new THREE.WebGLRenderer();
 
@@ -334,11 +338,90 @@ const downLabel = createLabel("DOWN", -20, 0xff0000);
 scene.add(upLabel);
 scene.add(downLabel);
 
-// Position camera at the center of the sky sphere
+// Position camera at the center of the sky sphere (original position)
 camera.position.set(0, 0, 0);
 camera.lookAt(0, 0, 20); // Look at the button initially
 controls.target.set(0, 0, 20);
 controls.update();
+
+// Create terrain below the camera
+// You can either use a heightmap image or procedural terrain
+// For now, we'll use procedural terrain since we don't have a heightmap image
+const terrain = terrainGenerator.createProceduralTerrain({
+  width: 64,
+  depth: 64,
+  spacingX: 2,
+  spacingZ: 2,
+  maxHeight: 20,
+  noiseScale: 0.15, // Increased noise scale for more dramatic displacement
+});
+
+// Position terrain much closer to the camera
+terrain.position.y = -10; // Move terrain up much closer to the camera
+
+// Add lighting for the terrain
+const terrainLight = new THREE.DirectionalLight(0xffffff, 0.8);
+terrainLight.position.set(100, 100, 100);
+scene.add(terrainLight);
+
+// Add ambient light for better terrain visibility
+const ambientLight = new THREE.AmbientLight(0x404040, 0.4);
+scene.add(ambientLight);
+
+// Function to create terrain from heightmap (uncomment and modify path when you have a heightmap image)
+/*
+async function createHeightmapTerrain() {
+  try {
+    const heightmapTerrain = await terrainGenerator.createTerrainFromHeightmap(
+      './src/resources/heightmap.png', // Path to your heightmap image
+      {
+        width: 256,
+        depth: 256,
+        spacingX: 2,
+        spacingZ: 2,
+        heightOffset: 2,
+        maxHeight: 50
+      }
+    );
+    heightmapTerrain.position.y = -100;
+    console.log('Heightmap terrain created successfully');
+  } catch (error) {
+    console.error('Failed to create heightmap terrain:', error);
+  }
+}
+
+// Uncomment the line below to use heightmap terrain instead of procedural
+// createHeightmapTerrain();
+*/
+
+// Terrain collision detection and camera height adjustment
+function getTerrainHeightAt(x: number, z: number): number {
+  if (!terrain) return -1000; // Default height if no terrain
+
+  // Convert world position to terrain local position
+  const terrainX = (x - terrain.position.x) / 2; // spacingX = 2
+  const terrainZ = (z - terrain.position.z) / 2; // spacingZ = 2
+
+  // Get terrain dimensions
+  const width = 64;
+  const depth = 64;
+
+  // Clamp to terrain bounds
+  const clampedX = Math.max(0, Math.min(width - 1, Math.floor(terrainX)));
+  const clampedZ = Math.max(0, Math.min(depth - 1, Math.floor(terrainZ)));
+
+  // Get vertex index
+  const vertexIndex = clampedZ * width + clampedX;
+
+  // Get height from terrain geometry
+  const positionAttribute = terrain.geometry.getAttribute("position");
+  if (positionAttribute && vertexIndex < positionAttribute.count) {
+    const y = positionAttribute.getY(vertexIndex);
+    return y + terrain.position.y; // Add terrain's world position
+  }
+
+  return terrain.position.y; // Fallback to terrain base height
+}
 
 // Animation loop
 function animate(): void {
@@ -349,14 +432,31 @@ function animate(): void {
     currentAzimuth += (targetAzimuth - currentAzimuth) * 0.1;
     currentPolar += (targetPolar - currentPolar) * 0.1;
 
-    // Apply smooth camera tracking from center
+    // Apply smooth camera tracking from center (original behavior)
     const radius = 5;
-    camera.position.x =
-      radius * Math.sin(currentPolar) * Math.cos(currentAzimuth);
-    camera.position.y = radius * Math.cos(currentPolar);
-    camera.position.z =
-      radius * Math.sin(currentPolar) * Math.sin(currentAzimuth);
-    camera.lookAt(0, 0, 0);
+    const targetX = radius * Math.sin(currentPolar) * Math.cos(currentAzimuth);
+    const targetZ = radius * Math.sin(currentPolar) * Math.sin(currentAzimuth);
+    const targetY = radius * Math.cos(currentPolar);
+
+    // Get terrain height directly below the camera
+    const terrainHeight = getTerrainHeightAt(targetX, targetZ);
+    const minHeightAboveTerrain = 10; // Minimum height above terrain
+    const requiredHeight = terrainHeight + minHeightAboveTerrain;
+
+    // Use the higher of the target Y or required height above terrain
+    const finalY = Math.max(targetY, requiredHeight);
+
+    // Smoothly move camera to final position
+    camera.position.x += (targetX - camera.position.x) * 0.1;
+    camera.position.y += (finalY - camera.position.y) * 0.1;
+    camera.position.z += (targetZ - camera.position.z) * 0.1;
+
+    // Also move the OrbitControls target up to maintain relative positioning
+    const currentTargetY = controls.target.y;
+    const targetTargetY = Math.max(0, requiredHeight - 5); // Keep target slightly below camera
+    controls.target.y += (targetTargetY - currentTargetY) * 0.1;
+
+    camera.lookAt(controls.target);
   } else {
     // Update OrbitControls only when experience is not active
     controls.update();
