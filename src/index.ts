@@ -406,7 +406,13 @@ const debugPause = document.getElementById("debug-pause") as HTMLElement;
 const controlsPanel = document.querySelector(".controls") as HTMLElement;
 
 // Debug UI visibility state
-let isDebugUIVisible = true;
+let isDebugUIVisible = false;
+
+// Initialize UI elements as hidden
+debugPanel.style.display = "none";
+controlsPanel.style.display = "none";
+document.body.style.cursor = "none";
+renderer.domElement.style.cursor = "none";
 
 // Handle key events
 document.addEventListener("keydown", (event) => {
@@ -435,6 +441,7 @@ document.addEventListener("keydown", (event) => {
     controlsPanel.style.display = isDebugUIVisible ? "block" : "none";
     stats.dom.style.display = isDebugUIVisible ? "block" : "none";
     document.body.style.cursor = isDebugUIVisible ? "pointer" : "none";
+    renderer.domElement.style.cursor = isDebugUIVisible ? "pointer" : "none";
     console.log(isDebugUIVisible ? "Debug UI SHOWN" : "Debug UI HIDDEN");
   }
 
