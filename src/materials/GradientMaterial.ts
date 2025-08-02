@@ -16,7 +16,7 @@ export class GradientMaterial {
         rotation: { value: 4.6 },
         starMinSize: { value: 15 },
         starMaxSize: { value: 25 },
-        starFadeOffset: { value: 0.75 },
+        starFadeOffset: { value: 0.1 },
       },
       vertexShader: `
         varying vec3 vWorldPosition;
@@ -61,6 +61,7 @@ export class GradientMaterial {
         
         void main() {
           vec3 pos = normalize(vWorldPosition + offset);
+          vec3 originalPos = normalize(vWorldPosition);
           
           // Create a proper 2D gradient using dot product
           vec2 gradientDir = vec2(cos(rotation), sin(rotation));
@@ -72,14 +73,28 @@ export class GradientMaterial {
           
           // Add stars only in the upper portion with horizon fade
           vec3 starColor = vec3(0.0);
-          if (pos.y > starFadeOffset) {
-            // Use screen-space coordinates for more predictable star placement
-            vec2 screenUV = vec2(atan(pos.x, pos.z) / (2.0 * 3.14159), pos.y);
-            float d = smoothstep(0.0, 0.002, dots(screenUV * 15.0));
+          if (originalPos.y > starFadeOffset) {
+            // Convert to spherical coordinates for proper star placement
+            float theta = acos(originalPos.y); // Angle from zenith (0 = top, PI = bottom)
+            float phi = atan(originalPos.z, originalPos.x); // Azimuthal angle
+            
+            // Map to UV coordinates that start from the top
+            vec2 starUV = vec2(
+              phi / (2.0 * 3.14159), // Normalize azimuth to 0-1
+              theta / 3.14159        // Normalize zenith angle to 0-1 (0 = top, 1 = horizon)
+            );
+            
+            float d = smoothstep(0.0, 0.002, dots(starUV * 15.0));
             
             // Calculate fade based on distance from horizon
-            float fadeFactor = smoothstep(starFadeOffset, 1.0, pos.y);
+            float fadeFactor = smoothstep(starFadeOffset, 1.0, originalPos.y);
             starColor = vec3(1.0 - d, 1.0 - d, 1.0 - d) * fadeFactor;
+          }
+          
+          // Add red star at the very top (zenith) using original world position
+          if (originalPos.y > 0.99) {
+            float redStar = smoothstep(0.0, 0.01, 1.0 - originalPos.y);
+            starColor += vec3(redStar, 0.0, 0.0);
           }
           
           gl_FragColor = vec4(gradientColor + starColor, 1.0);

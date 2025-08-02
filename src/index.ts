@@ -35,6 +35,53 @@ rotationSlider.addEventListener("input", (event) => {
 // Initialize display
 updateRotationDisplay(0);
 
+// Setup star min size slider
+const starMinSizeSlider = document.getElementById(
+  "star-min-size-slider"
+) as HTMLInputElement;
+const starMinSizeValue = document.getElementById(
+  "star-min-size-value"
+) as HTMLSpanElement;
+
+starMinSizeSlider.addEventListener("input", (event) => {
+  const value = parseInt((event.target as HTMLInputElement).value);
+  starMinSizeValue.textContent = value.toString();
+  gradientBackground.updateStarSizes(value, parseInt(starMaxSizeSlider.value));
+});
+
+// Setup star max size slider
+const starMaxSizeSlider = document.getElementById(
+  "star-max-size-slider"
+) as HTMLInputElement;
+const starMaxSizeValue = document.getElementById(
+  "star-max-size-value"
+) as HTMLSpanElement;
+
+starMaxSizeSlider.addEventListener("input", (event) => {
+  const value = parseInt((event.target as HTMLInputElement).value);
+  starMaxSizeValue.textContent = value.toString();
+  gradientBackground.updateStarSizes(parseInt(starMinSizeSlider.value), value);
+});
+
+// Setup star fade offset slider
+const starFadeOffsetSlider = document.getElementById(
+  "star-fade-offset-slider"
+) as HTMLInputElement;
+const starFadeOffsetValue = document.getElementById(
+  "star-fade-offset-value"
+) as HTMLSpanElement;
+
+starFadeOffsetSlider.addEventListener("input", (event) => {
+  const value = parseFloat((event.target as HTMLInputElement).value);
+  starFadeOffsetValue.textContent = value.toFixed(2);
+  gradientBackground.updateStarFadeOffset(value);
+});
+
+// Initialize star control displays
+starMinSizeValue.textContent = starMinSizeSlider.value;
+starMaxSizeValue.textContent = starMaxSizeSlider.value;
+starFadeOffsetValue.textContent = starFadeOffsetSlider.value;
+
 const camera = new THREE.PerspectiveCamera(
   75,
   window.innerWidth / window.innerHeight,
@@ -134,12 +181,12 @@ const blackOverlay = document.getElementById("black-overlay") as HTMLElement;
 // Create 3D button in the scene
 const buttonGeometry = new THREE.PlaneGeometry(2, 0.5);
 const buttonMaterial = new THREE.MeshBasicMaterial({
-  color: 0xd400e1,
+  color: 0xff0000, // Bright red for debugging
   transparent: true,
-  opacity: 0.9,
+  opacity: 1.0,
 });
 const sceneButton = new THREE.Mesh(buttonGeometry, buttonMaterial);
-sceneButton.position.set(0, 0, 2);
+sceneButton.position.set(0, 0, 20);
 scene.add(sceneButton);
 
 // Add text to the button
@@ -159,75 +206,53 @@ const buttonTextMaterial = new THREE.MeshBasicMaterial({
   opacity: 0.9,
 });
 const buttonText = new THREE.Mesh(buttonGeometry, buttonTextMaterial);
-buttonText.position.set(0, 0, 2.1);
+buttonText.position.set(0, 0, 20.1);
 scene.add(buttonText);
 
-// Raycaster for button interaction
-const raycaster = new THREE.Raycaster();
-const mouse = new THREE.Vector2();
+// Mouse tracking for experience (no longer needed for button detection)
 
-// Handle clicks on the 3D button (use mousedown to avoid OrbitControls interference)
+// Handle any click on the canvas to start the experience
 renderer.domElement.addEventListener("mousedown", (event) => {
   console.log("Mouse down event detected!");
   if (!isExperienceActive) {
-    console.log("Click detected, checking for button intersection...");
+    console.log("Canvas clicked! Starting experience...");
+    isExperienceActive = true;
 
-    // Calculate mouse position in normalized device coordinates
-    mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
-    mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+    // Initialize custom tracking to match current camera position
+    const currentCameraPosition = camera.position.clone();
+    const radius = 5;
 
-    console.log("Mouse position:", mouse.x, mouse.y);
+    // Calculate current spherical coordinates from camera position
+    currentAzimuth = Math.atan2(
+      currentCameraPosition.z,
+      currentCameraPosition.x
+    );
+    currentPolar = Math.acos(currentCameraPosition.y / radius);
 
-    // Update the picking ray with the camera and mouse position
-    raycaster.setFromCamera(mouse, camera);
+    // Set target to current position to prevent jumping
+    targetAzimuth = currentAzimuth;
+    targetPolar = currentPolar;
 
-    // Check for intersections with the button
-    const intersects = raycaster.intersectObject(sceneButton);
+    // Completely disable OrbitControls to prevent pointer capture errors
+    controls.enableRotate = false;
+    controls.enablePan = false;
+    controls.enableZoom = false;
+    controls.dispose(); // Remove all event listeners
 
-    console.log("Intersections found:", intersects.length);
+    // Remove 3D button from scene
+    scene.remove(sceneButton);
+    scene.remove(buttonText);
 
-    if (intersects.length > 0) {
-      console.log("Button clicked! Starting experience...");
-      isExperienceActive = true;
+    // Fade out black overlay to reveal scene
+    blackOverlay.style.opacity = "0";
+    setTimeout(() => {
+      blackOverlay.style.display = "none";
+    }, 500);
 
-      // Initialize custom tracking to match current camera position
-      const currentCameraPosition = camera.position.clone();
-      const radius = 5;
-
-      // Calculate current spherical coordinates from camera position
-      currentAzimuth = Math.atan2(
-        currentCameraPosition.z,
-        currentCameraPosition.x
-      );
-      currentPolar = Math.acos(currentCameraPosition.y / radius);
-
-      // Set target to current position to prevent jumping
-      targetAzimuth = currentAzimuth;
-      targetPolar = currentPolar;
-
-      // Completely disable OrbitControls to prevent pointer capture errors
-      controls.enableRotate = false;
-      controls.enablePan = false;
-      controls.enableZoom = false;
-      controls.dispose(); // Remove all event listeners
-
-      // Remove 3D button from scene
-      scene.remove(sceneButton);
-      scene.remove(buttonText);
-
-      // Fade out black overlay to reveal scene
-      blackOverlay.style.opacity = "0";
-      setTimeout(() => {
-        blackOverlay.style.display = "none";
-      }, 500);
-
-      // Request pointer lock immediately
-      renderer.domElement.requestPointerLock().catch((error) => {
-        console.log("Pointer lock failed:", error);
-      });
-    } else {
-      console.log("No intersection with button");
-    }
+    // Request pointer lock immediately
+    renderer.domElement.requestPointerLock().catch((error) => {
+      console.log("Pointer lock failed:", error);
+    });
   }
 });
 
@@ -309,9 +334,10 @@ const downLabel = createLabel("DOWN", -20, 0xff0000);
 scene.add(upLabel);
 scene.add(downLabel);
 
-// Position camera
-camera.position.set(0, 0, 5);
-controls.target.set(0, 0, 0);
+// Position camera at the center of the sky sphere
+camera.position.set(0, 0, 0);
+camera.lookAt(0, 0, 20); // Look at the button initially
+controls.target.set(0, 0, 20);
 controls.update();
 
 // Animation loop
@@ -323,7 +349,7 @@ function animate(): void {
     currentAzimuth += (targetAzimuth - currentAzimuth) * 0.1;
     currentPolar += (targetPolar - currentPolar) * 0.1;
 
-    // Apply smooth camera tracking
+    // Apply smooth camera tracking from center
     const radius = 5;
     camera.position.x =
       radius * Math.sin(currentPolar) * Math.cos(currentAzimuth);
