@@ -9,11 +9,11 @@ import Stats from "three/examples/jsm/libs/stats.module";
 const scene = new THREE.Scene();
 
 // Height-based fog system
-const globalPlane = new THREE.Plane(new THREE.Vector3(0, -1, 0), 0.0);
+const globalPlane = new THREE.Plane(new THREE.Vector3(0, -1, 0), 180.0); // Initialize with fog height value
 const fogPlane = new THREE.Vector4();
 let fogDepth = 200;
-let fogStartDistance = 10; // Distance from camera where fog starts
-let fogEndDistance = 1200; // Distance from camera where fog is fully opaque (covers sky sphere)
+let fogStartDistance = 45; // Distance from camera where fog starts
+let fogEndDistance = 1500; // Distance from camera where fog is fully opaque (covers sky sphere)
 let fogColor = new THREE.Color(colors.darkBlue);
 
 // Store references to foggy materials for updating uniforms
@@ -95,12 +95,49 @@ starFadeOffsetSlider.addEventListener("input", (event) => {
   const value = parseFloat((event.target as HTMLInputElement).value);
   starFadeOffsetValue.textContent = value.toFixed(2);
   gradientBackground.updateStarFadeOffset(value);
+
+  // Update star opacity based on new fade offset
+  updateStarOpacity(value);
 });
 
 // Initialize star control displays
 starMinSizeValue.textContent = starMinSizeSlider.value;
 starMaxSizeValue.textContent = starMaxSizeSlider.value;
 starFadeOffsetValue.textContent = starFadeOffsetSlider.value;
+
+// Initialize star fade offset effect
+updateStarOpacity(parseFloat(starFadeOffsetSlider.value));
+
+// Function to update star opacity based on fade offset
+function updateStarOpacity(fadeOffset: number) {
+  scene.traverse((object) => {
+    if (
+      object instanceof THREE.Mesh &&
+      object.material instanceof THREE.MeshBasicMaterial
+    ) {
+      const material = object.material as THREE.MeshBasicMaterial;
+      if (
+        material.color &&
+        material.color.getHex() === 0xffffff &&
+        material.transparent
+      ) {
+        // This is a star - update its opacity
+        const starY = object.position.y;
+        const horizonHeight = 0;
+        const fadeStart = horizonHeight + fadeOffset;
+        const fadeEnd = horizonHeight - fadeOffset;
+
+        let opacity = 1.0;
+        if (starY < fadeStart) {
+          opacity = Math.max(0, (starY - fadeEnd) / (fadeStart - fadeEnd));
+        }
+
+        material.opacity = opacity;
+        material.needsUpdate = true;
+      }
+    }
+  });
+}
 
 // Setup fog distance slider
 const fogDistanceSlider = document.getElementById(
@@ -137,7 +174,8 @@ fogStartDistanceSlider.addEventListener("input", (event) => {
   // Update fog start distance
   fogStartDistance = value;
   console.log(`Fog start distance set to: ${fogStartDistance}`);
-  recreateAllFoggyMaterials();
+  console.log(`Foggy materials count: ${foggyMaterials.length}`);
+  updateAllFoggyMaterials();
 });
 
 // Setup fog end distance slider
@@ -155,12 +193,16 @@ fogEndDistanceSlider.addEventListener("input", (event) => {
   // Update fog end distance
   fogEndDistance = value;
   console.log(`Fog end distance set to: ${fogEndDistance}`);
-  recreateAllFoggyMaterials();
+  updateAllFoggyMaterials();
 });
 
 // Initialize fog distance displays
 fogStartDistanceValue.textContent = fogStartDistanceSlider.value;
 fogEndDistanceValue.textContent = fogEndDistanceSlider.value;
+
+// Initialize fog distance slider values to match the variables
+fogDistanceSlider.value = fogDepth.toString();
+fogDistanceValue.textContent = fogDepth.toString();
 
 // Setup fog height slider
 const fogHeightSlider = document.getElementById(
@@ -201,7 +243,9 @@ function updateAllFoggyMaterials() {
     // Mark material as needing update
     material.needsUpdate = true;
   });
-  console.log(`Updated ${materialCount} foggy materials`);
+  console.log(
+    `Updated ${materialCount} foggy materials with start=${fogStartDistance}, end=${fogEndDistance}`
+  );
 }
 
 // Function to force shader compilation for all materials
@@ -358,6 +402,12 @@ const debugExperience = document.getElementById(
 const debugVertical = document.getElementById("debug-vertical") as HTMLElement;
 const debugPause = document.getElementById("debug-pause") as HTMLElement;
 
+// Controls panel element
+const controlsPanel = document.querySelector(".controls") as HTMLElement;
+
+// Debug UI visibility state
+let isDebugUIVisible = true;
+
 // Handle key events
 document.addEventListener("keydown", (event) => {
   if (event.key === "Escape" && isExperienceActive) {
@@ -376,6 +426,16 @@ document.addEventListener("keydown", (event) => {
     // Re-add button to scene
     scene.add(sceneButton);
     scene.add(buttonText);
+  }
+
+  // Toggle debug UI with H key
+  if (event.key === "h" || event.key === "H") {
+    isDebugUIVisible = !isDebugUIVisible;
+    debugPanel.style.display = isDebugUIVisible ? "block" : "none";
+    controlsPanel.style.display = isDebugUIVisible ? "block" : "none";
+    stats.dom.style.display = isDebugUIVisible ? "block" : "none";
+    document.body.style.cursor = isDebugUIVisible ? "pointer" : "none";
+    console.log(isDebugUIVisible ? "Debug UI SHOWN" : "Debug UI HIDDEN");
   }
 
   // Pause controls with spacebar (only when experience is active)
@@ -613,10 +673,56 @@ const skyGeometry = new THREE.SphereGeometry(1000, 32, 32);
 const skyMaterial = getFoggyMaterial(
   fogDepth,
   fogColor,
-  parseInt(colors.steelPink.replace("#", "0x")),
+  parseInt(colors.deepBlue.replace("#", "0x")),
   THREE.BackSide
 );
-scene.add(new THREE.Mesh(skyGeometry, skyMaterial));
+// Make the sky material self-illuminating
+skyMaterial.emissive = new THREE.Color(colors.deepBlue);
+skyMaterial.emissiveIntensity = 0.3;
+const skySphere = new THREE.Mesh(skyGeometry, skyMaterial);
+scene.add(skySphere);
+
+// Add white dots (stars) to the sky
+const starGeometry = new THREE.SphereGeometry(1, 8, 8);
+
+// Create stars at random positions on the sky sphere
+for (let i = 0; i < 200; i++) {
+  // Random position on a sphere
+  const theta = Math.random() * Math.PI * 2; // Random angle around Y axis
+  const phi = Math.acos(Math.random() * 2 - 1); // Random angle from Y axis
+  const radius = 950; // Slightly inside the sky sphere
+
+  const starX = radius * Math.sin(phi) * Math.cos(theta);
+  const starY = radius * Math.cos(phi);
+  const starZ = radius * Math.sin(phi) * Math.sin(theta);
+
+  // Calculate opacity based on height (Y position)
+  const horizonHeight = 0; // Horizon level
+  const fadeOffset = parseFloat(starFadeOffsetSlider.value);
+  const fadeStart = horizonHeight + fadeOffset;
+  const fadeEnd = horizonHeight - fadeOffset;
+
+  let opacity = 1.0;
+  if (starY < fadeStart) {
+    opacity = Math.max(0, (starY - fadeEnd) / (fadeStart - fadeEnd));
+  }
+
+  const starMaterial = new THREE.MeshBasicMaterial({
+    color: 0xffffff,
+    transparent: true,
+    opacity: opacity,
+    fog: false, // Disable fog for stars
+  });
+
+  const star = new THREE.Mesh(starGeometry, starMaterial);
+  star.position.set(starX, starY, starZ);
+
+  // Random size - middle ground
+  const scale = 0.5 + Math.random() * 1.0;
+  star.scale.set(scale, scale, scale);
+
+  scene.add(star);
+}
 
 // Function to create terrain from heightmap (uncomment and modify path when you have a heightmap image)
 /*
@@ -704,29 +810,31 @@ function getFoggyMaterial(
       float planeFog = 0.0;
       float distanceFog = 0.0;
       
-      // Height-based fog
+      // Calculate view distance once
+      float viewDistance = length(vViewPosition);
+      
+      // Distance fog: 0 at start distance, 1 at end distance
+      if (viewDistance <= fStartDistance) {
+        distanceFog = 0.0; // No fog within start distance
+      } else {
+        distanceFog = smoothstep(fStartDistance, fEndDistance, viewDistance);
+      }
+      
+      // Height fog: controls overall intensity based on height
       planeFog = smoothstep(0.0, -fDepth, dot( vViewPosition, fPlane.xyz) - fPlane.w);
       
-      // Distance-based fog with smooth falloff
-      float viewDistance = length(vViewPosition);
-      float falloffStart = fStartDistance * 0.3; // Start falloff at 30% of start distance
-      float clearDistance = fStartDistance; // Objects within this distance should be clear
-      
-      // Create smooth transition: 0 at clearDistance, 1 at fEndDistance
-      distanceFog = smoothstep(clearDistance, fEndDistance, viewDistance);
-      
-      // Combine distance and height fog - distance fog provides the base, height fog adds to it
-      float totalFog = distanceFog;
-      
-      // Add height fog on top of distance fog
-      totalFog = max(distanceFog, planeFog);
+      // Combine: distance fog provides the base, height fog adds to it
+      float totalFog = max(distanceFog, planeFog);
       `
     );
 
     shader.fragmentShader = shader.fragmentShader.replace(
       `#include <fog_fragment>`,
       `#include <fog_fragment>
-       gl_FragColor.rgb = mix( gl_FragColor.rgb, fColor, totalFog );
+       // Apply fog with smooth falloff around start distance
+       float falloffStart = fStartDistance * 0.7; // Start falloff at 70% of start distance
+       float falloffFactor = smoothstep(falloffStart, fStartDistance, viewDistance);
+       gl_FragColor.rgb = mix( gl_FragColor.rgb, fColor, totalFog * falloffFactor );
       `
     );
   };
