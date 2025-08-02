@@ -100,7 +100,7 @@ export class GradientMaterial {
           gl_FragColor = vec4(gradientColor + starColor, 1.0);
         }
       `,
-      side: THREE.BackSide,
+      fog: true,
     });
 
     // Create a large sphere for the gradient background
@@ -109,7 +109,8 @@ export class GradientMaterial {
   }
 
   addToScene(scene: THREE.Scene): void {
-    scene.add(this.backgroundSphere);
+    // Temporarily hide the sky sphere while working on fog
+    // scene.add(this.backgroundSphere);
   }
 
   updateColors(topColor: string, bottomColor: string): void {

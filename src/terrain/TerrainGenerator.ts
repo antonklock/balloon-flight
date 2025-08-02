@@ -1,11 +1,20 @@
 import * as THREE from "three";
+import { colors } from "../resources/colors";
 
 export class TerrainGenerator {
   private scene: THREE.Scene;
   private terrainMesh?: THREE.Mesh;
+  private materialFunction?: (
+    color: number,
+    side?: THREE.Side
+  ) => THREE.Material;
 
-  constructor(scene: THREE.Scene) {
+  constructor(
+    scene: THREE.Scene,
+    materialFunction?: (color: number, side?: THREE.Side) => THREE.Material
+  ) {
     this.scene = scene;
+    this.materialFunction = materialFunction;
   }
 
   async createTerrainFromHeightmap(
@@ -54,7 +63,7 @@ export class TerrainGenerator {
           // Create geometry
           const geometry = new THREE.BufferGeometry();
           const vertices: number[] = [];
-          const colors: number[] = [];
+          const vertexColors: number[] = [];
           const indices: number[] = [];
 
           // Create vertices from heightmap
@@ -83,7 +92,7 @@ export class TerrainGenerator {
                 color.setRGB(0.5 + (normalizedHeight - 0.7) * 1.67, 0, 0);
               }
 
-              colors.push(color.r, color.g, color.b);
+              vertexColors.push(color.r, color.g, color.b);
             }
           }
 
@@ -109,7 +118,7 @@ export class TerrainGenerator {
           );
           geometry.setAttribute(
             "color",
-            new THREE.Float32BufferAttribute(colors, 3)
+            new THREE.Float32BufferAttribute(vertexColors, 3)
           );
           geometry.setIndex(indices);
 
@@ -117,10 +126,18 @@ export class TerrainGenerator {
           geometry.computeVertexNormals();
 
           // Create material
-          const material = new THREE.MeshLambertMaterial({
-            vertexColors: true,
-            side: THREE.DoubleSide,
-          });
+          let material: THREE.Material;
+          if (this.materialFunction) {
+            material = this.materialFunction(0x404040, THREE.DoubleSide);
+            if (material instanceof THREE.MeshStandardMaterial) {
+              material.vertexColors = true;
+            }
+          } else {
+            material = new THREE.MeshLambertMaterial({
+              vertexColors: true,
+              side: THREE.DoubleSide,
+            });
+          }
 
           // Create mesh
           const mesh = new THREE.Mesh(geometry, material);
@@ -169,7 +186,7 @@ export class TerrainGenerator {
 
     const geometry = new THREE.BufferGeometry();
     const vertices: number[] = [];
-    const colors: number[] = [];
+    const vertexColors: number[] = [];
     const indices: number[] = [];
 
     // Simple noise function
@@ -183,19 +200,15 @@ export class TerrainGenerator {
         const height = noise(x, z) * maxHeight;
         vertices.push(x * spacingX, height, z * spacingZ);
 
-        // Color based on height
+        // Color based on height - using deep blue with slight variations
         const normalizedHeight = height / maxHeight;
-        let color = new THREE.Color();
+        let color = new THREE.Color(colors.deepBlue);
 
-        if (normalizedHeight < 0.3) {
-          color.setRGB(0, 0, 0.5 + normalizedHeight * 0.5);
-        } else if (normalizedHeight < 0.7) {
-          color.setRGB(0, 0.5 + (normalizedHeight - 0.3) * 1.25, 0);
-        } else {
-          color.setRGB(0.5 + (normalizedHeight - 0.7) * 1.67, 0, 0);
-        }
+        // Add slight height-based variation to the deep blue
+        const heightVariation = normalizedHeight * 0.3; // 30% variation
+        color.offsetHSL(0, 0, heightVariation - 0.15); // Slight brightness variation
 
-        colors.push(color.r, color.g, color.b);
+        vertexColors.push(color.r, color.g, color.b);
       }
     }
 
@@ -216,14 +229,28 @@ export class TerrainGenerator {
       "position",
       new THREE.Float32BufferAttribute(vertices, 3)
     );
-    geometry.setAttribute("color", new THREE.Float32BufferAttribute(colors, 3));
+    geometry.setAttribute(
+      "color",
+      new THREE.Float32BufferAttribute(vertexColors, 3)
+    );
     geometry.setIndex(indices);
     geometry.computeVertexNormals();
 
-    const material = new THREE.MeshLambertMaterial({
-      vertexColors: true,
-      side: THREE.DoubleSide,
-    });
+    let material: THREE.Material;
+    if (this.materialFunction) {
+      material = this.materialFunction(
+        parseInt(colors.deepBlue.replace("#", "0x")),
+        THREE.DoubleSide
+      );
+      if (material instanceof THREE.MeshStandardMaterial) {
+        material.vertexColors = true;
+      }
+    } else {
+      material = new THREE.MeshLambertMaterial({
+        vertexColors: true,
+        side: THREE.DoubleSide,
+      });
+    }
 
     const mesh = new THREE.Mesh(geometry, material);
 
