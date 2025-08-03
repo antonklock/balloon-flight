@@ -15,12 +15,60 @@ const fogPlane = new THREE.Vector4();
 let fogDepth = 200;
 let fogStartDistance = 45; // Distance from camera where fog starts
 let fogEndDistance = 1500; // Distance from camera where fog is fully opaque (covers sky sphere)
-let fogColor = new THREE.Color(colors.steelPink);
+let fogCloseHue = 294; // Hue for close fog
+let fogDistantHue = 23; // Hue for distant fog
+let fogColor = hslToRgb(fogCloseHue, 80, 50); // 80% saturation, 50% lightness
 let fogColorStartDistance = 45; // Distance where color transition starts
 let fogColorEndDistance = 300; // Distance where color transition ends
 
+// Initialize fog colors immediately
+fogColor = hslToRgb(fogCloseHue, 80, 50); // 80% saturation, 50% lightness
+
 // Store references to foggy materials for updating uniforms
 const foggyMaterials: Array<{ material: THREE.Material; uniforms: any }> = [];
+
+// Helper function to convert HSL to RGB
+function hslToRgb(h: number, s: number, l: number): THREE.Color {
+  h = h / 360; // Convert to 0-1 range
+  s = s / 100; // Convert to 0-1 range
+  l = l / 100; // Convert to 0-1 range
+
+  const c = (1 - Math.abs(2 * l - 1)) * s;
+  const x = c * (1 - Math.abs(((h * 6) % 2) - 1));
+  const m = l - c / 2;
+
+  let r = 0,
+    g = 0,
+    b = 0;
+
+  if (h < 1 / 6) {
+    r = c;
+    g = x;
+    b = 0;
+  } else if (h < 2 / 6) {
+    r = x;
+    g = c;
+    b = 0;
+  } else if (h < 3 / 6) {
+    r = 0;
+    g = c;
+    b = x;
+  } else if (h < 4 / 6) {
+    r = 0;
+    g = x;
+    b = c;
+  } else if (h < 5 / 6) {
+    r = x;
+    g = 0;
+    b = c;
+  } else {
+    r = c;
+    g = 0;
+    b = x;
+  }
+
+  return new THREE.Color(r + m, g + m, b + m);
+}
 
 // Create gradient background
 const gradientBackground = new GradientMaterial();
@@ -242,7 +290,7 @@ function updateAllFoggyMaterials() {
     if (uniforms.fEndDistance) uniforms.fEndDistance.value = fogEndDistance;
     if (uniforms.fColor) uniforms.fColor.value = fogColor;
     if (uniforms.fColorDistant)
-      uniforms.fColorDistant.value = new THREE.Color(colors.deepBlue);
+      uniforms.fColorDistant.value = hslToRgb(fogDistantHue, 80, 50); // 80% saturation, 50% lightness
     if (uniforms.fColorStartDistance)
       uniforms.fColorStartDistance.value = fogColorStartDistance;
     if (uniforms.fColorEndDistance)
@@ -483,6 +531,61 @@ fogColorEndSlider.addEventListener("input", (event) => {
   // Update all foggy materials with new color distance
   updateAllFoggyMaterials();
 });
+
+// Setup fog close hue slider
+const fogCloseHueSlider = document.getElementById(
+  "fog-close-hue-slider"
+) as HTMLInputElement;
+const fogCloseHueValue = document.getElementById(
+  "fog-close-hue-value"
+) as HTMLSpanElement;
+
+fogCloseHueSlider.addEventListener("input", (event) => {
+  const value = parseInt((event.target as HTMLInputElement).value);
+  fogCloseHueValue.textContent = value.toString();
+  fogCloseHue = value;
+  console.log("Fog close hue changed to:", value);
+
+  // Update fog color based on new hue
+  fogColor = hslToRgb(fogCloseHue, 80, 50); // 80% saturation, 50% lightness
+
+  // Update all foggy materials with new color
+  updateAllFoggyMaterials();
+});
+
+// Setup fog distant hue slider
+const fogDistantHueSlider = document.getElementById(
+  "fog-distant-hue-slider"
+) as HTMLInputElement;
+const fogDistantHueValue = document.getElementById(
+  "fog-distant-hue-value"
+) as HTMLSpanElement;
+
+fogDistantHueSlider.addEventListener("input", (event) => {
+  const value = parseInt((event.target as HTMLInputElement).value);
+  fogDistantHueValue.textContent = value.toString();
+  fogDistantHue = value;
+  console.log("Fog distant hue changed to:", value);
+
+  // Update all foggy materials with new distant color
+  updateAllFoggyMaterials();
+});
+
+// Initialize fog slider values from JavaScript variables
+fogColorStartSlider.value = fogColorStartDistance.toString();
+fogColorStartValue.textContent = fogColorStartDistance.toString();
+
+fogColorEndSlider.value = fogColorEndDistance.toString();
+fogColorEndValue.textContent = fogColorEndDistance.toString();
+
+fogCloseHueSlider.value = fogCloseHue.toString();
+fogCloseHueValue.textContent = fogCloseHue.toString();
+
+fogDistantHueSlider.value = fogDistantHue.toString();
+fogDistantHueValue.textContent = fogDistantHue.toString();
+
+// Update fog materials with initial values
+updateAllFoggyMaterials();
 
 // Setup mountain position slider
 const mountainPositionSlider = document.getElementById(
@@ -1133,9 +1236,11 @@ function getFoggyMaterial(
       // Calculate view distance once
       float viewDistance = length(vViewPosition);
       
-      // Distance fog: 0 at start distance, 1 at end distance
+      // Distance fog: 0 at start distance, 1 at end distance, no fog beyond end distance
       if (viewDistance <= fStartDistance) {
         distanceFog = 0.0; // No fog within start distance
+      } else if (viewDistance >= fEndDistance) {
+        distanceFog = 0.0; // No fog beyond end distance (objects become visible again)
       } else {
         distanceFog = smoothstep(fStartDistance, fEndDistance, viewDistance);
       }
