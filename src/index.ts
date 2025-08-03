@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { FirstPersonControls } from "three/examples/jsm/controls/FirstPersonControls.js";
+import { OBJLoader } from "three/examples/jsm/loaders/OBJLoader.js";
 import { GradientMaterial } from "./materials/GradientMaterial";
 import { TerrainGenerator } from "./terrain/TerrainGenerator";
 import { colors } from "./resources/colors";
@@ -14,7 +15,9 @@ const fogPlane = new THREE.Vector4();
 let fogDepth = 200;
 let fogStartDistance = 45; // Distance from camera where fog starts
 let fogEndDistance = 1500; // Distance from camera where fog is fully opaque (covers sky sphere)
-let fogColor = new THREE.Color(colors.darkBlue);
+let fogColor = new THREE.Color(colors.steelPink);
+let fogColorStartDistance = 45; // Distance where color transition starts
+let fogColorEndDistance = 300; // Distance where color transition ends
 
 // Store references to foggy materials for updating uniforms
 const foggyMaterials: Array<{ material: THREE.Material; uniforms: any }> = [];
@@ -238,6 +241,12 @@ function updateAllFoggyMaterials() {
       uniforms.fStartDistance.value = fogStartDistance;
     if (uniforms.fEndDistance) uniforms.fEndDistance.value = fogEndDistance;
     if (uniforms.fColor) uniforms.fColor.value = fogColor;
+    if (uniforms.fColorDistant)
+      uniforms.fColorDistant.value = new THREE.Color(colors.deepBlue);
+    if (uniforms.fColorStartDistance)
+      uniforms.fColorStartDistance.value = fogColorStartDistance;
+    if (uniforms.fColorEndDistance)
+      uniforms.fColorEndDistance.value = fogColorEndDistance;
     if (uniforms.fPlane) uniforms.fPlane.value = fogPlane;
 
     // Mark material as needing update
@@ -322,6 +331,245 @@ function recreateAllFoggyMaterials() {
 
 // Initialize fog height display
 fogHeightValue.textContent = fogHeightSlider.value;
+
+// Setup mountain count slider
+const mountainCountSlider = document.getElementById(
+  "mountain-count-slider"
+) as HTMLInputElement;
+const mountainCountValue = document.getElementById(
+  "mountain-count-value"
+) as HTMLSpanElement;
+
+mountainCountSlider.addEventListener("input", (event) => {
+  const value = parseInt((event.target as HTMLInputElement).value);
+  mountainCountValue.textContent = value.toString();
+
+  // Recreate mountains with new count
+  recreateMountains();
+});
+
+// Setup mountain distance slider
+const mountainDistanceSlider = document.getElementById(
+  "mountain-distance-slider"
+) as HTMLInputElement;
+const mountainDistanceValue = document.getElementById(
+  "mountain-distance-value"
+) as HTMLSpanElement;
+
+mountainDistanceSlider.addEventListener("input", (event) => {
+  const value = parseInt((event.target as HTMLInputElement).value);
+  mountainDistanceValue.textContent = value.toString();
+
+  // Recreate mountains with new distance
+  recreateMountains();
+});
+
+// Setup mountain height slider
+const mountainHeightSlider = document.getElementById(
+  "mountain-height-slider"
+) as HTMLInputElement;
+const mountainHeightValue = document.getElementById(
+  "mountain-height-value"
+) as HTMLSpanElement;
+
+mountainHeightSlider.addEventListener("input", (event) => {
+  const value = parseInt((event.target as HTMLInputElement).value);
+  mountainHeightValue.textContent = value.toString();
+
+  // Recreate mountains with new height
+  recreateMountains();
+});
+
+// Setup ground distance slider
+const groundDistanceSlider = document.getElementById(
+  "ground-distance-slider"
+) as HTMLInputElement;
+const groundDistanceValue = document.getElementById(
+  "ground-distance-value"
+) as HTMLSpanElement;
+
+groundDistanceSlider.addEventListener("input", (event) => {
+  const value = parseInt((event.target as HTMLInputElement).value);
+  groundDistanceValue.textContent = value.toString();
+
+  // Recreate mountains with new ground distance
+  recreateMountains();
+});
+
+// Setup balloon height slider
+const balloonHeightSlider = document.getElementById(
+  "balloon-height-slider"
+) as HTMLInputElement;
+const balloonHeightValue = document.getElementById(
+  "balloon-height-value"
+) as HTMLSpanElement;
+
+balloonHeightSlider.addEventListener("input", (event) => {
+  const value = parseInt((event.target as HTMLInputElement).value);
+  balloonHeightValue.textContent = value.toString();
+  console.log("Balloon height changed to:", value);
+
+  // Balloon position will be updated in the animation loop
+  // No need to update here since it follows the camera
+});
+
+// Setup balloon scale slider
+const balloonScaleSlider = document.getElementById(
+  "balloon-scale-slider"
+) as HTMLInputElement;
+const balloonScaleValue = document.getElementById(
+  "balloon-scale-value"
+) as HTMLSpanElement;
+
+balloonScaleSlider.addEventListener("input", (event) => {
+  const value = parseFloat((event.target as HTMLInputElement).value);
+  balloonScaleValue.textContent = value.toFixed(1);
+  console.log("Balloon scale changed to:", value);
+
+  // Update balloon scale
+  if (balloon) {
+    balloon.scale.set(value, value, value);
+  }
+});
+
+// Setup balloon distance slider
+const balloonDistanceSlider = document.getElementById(
+  "balloon-distance-slider"
+) as HTMLInputElement;
+const balloonDistanceValue = document.getElementById(
+  "balloon-distance-value"
+) as HTMLSpanElement;
+
+balloonDistanceSlider.addEventListener("input", (event) => {
+  const value = parseInt((event.target as HTMLInputElement).value);
+  balloonDistanceValue.textContent = value.toString();
+  console.log("Balloon distance changed to:", value);
+
+  // Balloon distance will be updated in the animation loop
+});
+
+// Setup fog color start distance slider
+const fogColorStartSlider = document.getElementById(
+  "fog-color-start-slider"
+) as HTMLInputElement;
+const fogColorStartValue = document.getElementById(
+  "fog-color-start-value"
+) as HTMLSpanElement;
+
+fogColorStartSlider.addEventListener("input", (event) => {
+  const value = parseInt((event.target as HTMLInputElement).value);
+  fogColorStartValue.textContent = value.toString();
+  fogColorStartDistance = value;
+  console.log("Fog color start distance changed to:", value);
+
+  // Update all foggy materials with new color distance
+  updateAllFoggyMaterials();
+});
+
+// Setup fog color end distance slider
+const fogColorEndSlider = document.getElementById(
+  "fog-color-end-slider"
+) as HTMLInputElement;
+const fogColorEndValue = document.getElementById(
+  "fog-color-end-value"
+) as HTMLSpanElement;
+
+fogColorEndSlider.addEventListener("input", (event) => {
+  const value = parseInt((event.target as HTMLInputElement).value);
+  fogColorEndValue.textContent = value.toString();
+  fogColorEndDistance = value;
+  console.log("Fog color end distance changed to:", value);
+
+  // Update all foggy materials with new color distance
+  updateAllFoggyMaterials();
+});
+
+// Setup mountain position slider
+const mountainPositionSlider = document.getElementById(
+  "mountain-position-slider"
+) as HTMLInputElement;
+const mountainPositionValue = document.getElementById(
+  "mountain-position-value"
+) as HTMLSpanElement;
+
+mountainPositionSlider.addEventListener("input", (event) => {
+  const value = parseInt((event.target as HTMLInputElement).value);
+  mountainPositionValue.textContent = value.toString();
+
+  // Recreate mountains with new position
+  recreateMountains();
+});
+
+// Function to recreate mountains with current slider values
+function recreateMountains() {
+  // Remove existing mountains and ground plane
+  if (distantMountains) {
+    distantMountains.forEach((mountain) => {
+      scene.remove(mountain);
+      mountain.geometry.dispose();
+      if (mountain.material instanceof THREE.Material) {
+        mountain.material.dispose();
+      }
+    });
+  }
+
+  if (groundPlane) {
+    scene.remove(groundPlane);
+    groundPlane.geometry.dispose();
+    if (groundPlane.material instanceof THREE.Material) {
+      groundPlane.material.dispose();
+    }
+  }
+
+  // Create new mountain system with current settings
+  const newMountainSystem = terrainGenerator.createDistantMountains({
+    count: parseInt(mountainCountSlider.value),
+    distance: parseInt(groundDistanceSlider.value),
+    minHeight: 40,
+    maxHeight: parseInt(mountainHeightSlider.value),
+    width: 200,
+    depth: 200,
+    color: 0x2d4a3e,
+    groundColor: 0x1a3a2e,
+    mountainPosition: parseInt(mountainPositionSlider.value),
+  });
+
+  // Update the references
+  distantMountains = newMountainSystem.mountains;
+  groundPlane = newMountainSystem.groundPlane;
+}
+
+// Mountain system configuration - single source of truth
+const mountainConfig = {
+  count: 26,
+  distance: 900,
+  maxHeight: 160,
+  groundDistance: 900,
+  mountainPosition: -40,
+};
+
+// Function to sync slider values with Three.js configuration
+function syncSliderValues() {
+  // Update slider values and displays
+  mountainCountSlider.value = mountainConfig.count.toString();
+  mountainCountValue.textContent = mountainConfig.count.toString();
+
+  mountainDistanceSlider.value = mountainConfig.distance.toString();
+  mountainDistanceValue.textContent = mountainConfig.distance.toString();
+
+  mountainHeightSlider.value = mountainConfig.maxHeight.toString();
+  mountainHeightValue.textContent = mountainConfig.maxHeight.toString();
+
+  groundDistanceSlider.value = mountainConfig.groundDistance.toString();
+  groundDistanceValue.textContent = mountainConfig.groundDistance.toString();
+
+  mountainPositionSlider.value = mountainConfig.mountainPosition.toString();
+  mountainPositionValue.textContent =
+    mountainConfig.mountainPosition.toString();
+}
+
+// Initialize slider values from Three.js configuration
+syncSliderValues();
 
 const camera = new THREE.PerspectiveCamera(
   75,
@@ -629,6 +877,65 @@ const terrain = terrainGenerator.createProceduralTerrain({
 // Position terrain much closer to the camera
 terrain.position.y = -10; // Move terrain up much closer to the camera
 
+// Create distant mountains with ground plane
+const mountainSystem = terrainGenerator.createDistantMountains({
+  count: mountainConfig.count,
+  distance: mountainConfig.groundDistance,
+  minHeight: 40,
+  maxHeight: mountainConfig.maxHeight,
+  width: 200, // Wider segments for better overlap
+  depth: 200,
+  color: 0x2d4a3e, // Dark green-gray for mountains
+  groundColor: 0x1a3a2e, // Darker green for ground
+  mountainPosition: mountainConfig.mountainPosition,
+});
+
+let distantMountains = mountainSystem.mountains;
+let groundPlane = mountainSystem.groundPlane;
+
+// Load balloon mesh
+const balloonLoader = new OBJLoader();
+let balloon: THREE.Group | null = null;
+
+balloonLoader.load(
+  "./assets/meshes/balloon_v1.obj",
+  (object) => {
+    console.log("Balloon loaded successfully");
+    balloon = object;
+
+    // Scale the balloon to appropriate size
+    balloon.scale.set(2.5, 2.5, 2.5);
+
+    // Position the balloon above the terrain
+    balloon.position.set(0, -5, 0);
+
+    // Apply regular material to all balloon parts
+    balloon.traverse((child) => {
+      if (child instanceof THREE.Mesh) {
+        const material = new THREE.MeshStandardMaterial({
+          color: parseInt(colors.steelPink.replace("#", "0x")), // Steelpink color for balloon
+          side: THREE.DoubleSide,
+          metalness: 0.1,
+          roughness: 0.8,
+        });
+        child.material = material;
+      }
+    });
+
+    scene.add(balloon);
+    console.log("Balloon added to scene at position:", balloon.position);
+  },
+  (progress) => {
+    console.log(
+      "Loading balloon...",
+      (progress.loaded / progress.total) * 100 + "%"
+    );
+  },
+  (error) => {
+    console.error("Error loading balloon:", error);
+  }
+);
+
 // Add lighting for the terrain
 const terrainLight = new THREE.DirectionalLight(0xffffff, 0.8);
 terrainLight.position.set(100, 100, 100);
@@ -796,8 +1103,11 @@ function getFoggyMaterial(
     shader.uniforms.fPlane = { value: fogPlane };
     shader.uniforms.fDepth = { value: fogDepth };
     shader.uniforms.fColor = { value: fogColor };
+    shader.uniforms.fColorDistant = { value: new THREE.Color(colors.deepBlue) };
     shader.uniforms.fStartDistance = { value: fogStartDistance };
     shader.uniforms.fEndDistance = { value: fogEndDistance };
+    shader.uniforms.fColorStartDistance = { value: fogColorStartDistance };
+    shader.uniforms.fColorEndDistance = { value: fogColorEndDistance };
 
     // Store reference to this material and its uniforms for later updates
     foggyMaterials.push({ material, uniforms: shader.uniforms });
@@ -807,8 +1117,11 @@ function getFoggyMaterial(
       uniform vec4 fPlane;
       uniform float fDepth;
       uniform vec3 fColor;
+      uniform vec3 fColorDistant;
       uniform float fStartDistance;
       uniform float fEndDistance;
+      uniform float fColorStartDistance;
+      uniform float fColorEndDistance;
     ` + shader.fragmentShader;
 
     shader.fragmentShader = shader.fragmentShader.replace(
@@ -841,7 +1154,12 @@ function getFoggyMaterial(
        // Apply fog with smooth falloff around start distance
        float falloffStart = fStartDistance * 0.7; // Start falloff at 70% of start distance
        float falloffFactor = smoothstep(falloffStart, fStartDistance, viewDistance);
-       gl_FragColor.rgb = mix( gl_FragColor.rgb, fColor, totalFog * falloffFactor );
+       
+       // Interpolate between close and distant fog colors based on distance
+       float colorBlendFactor = smoothstep(fColorStartDistance, fColorEndDistance, viewDistance);
+       vec3 fogColorBlended = mix(fColor, fColorDistant, colorBlendFactor);
+       
+       gl_FragColor.rgb = mix( gl_FragColor.rgb, fogColorBlended, totalFog * falloffFactor );
       `
     );
   };
@@ -906,6 +1224,14 @@ function animate(): void {
   debugVertical.textContent = `Vertical: ${verticalStatus}`;
   debugPause.textContent = `Pause: ${isPaused ? "YES" : "NO"}`;
 
+  // Add balloon status to debug panel
+  const balloonStatus = document.getElementById(
+    "balloon-status"
+  ) as HTMLElement;
+  if (balloonStatus) {
+    balloonStatus.textContent = `Balloon: ${balloon ? "LOADED" : "LOADING..."}`;
+  }
+
   // Reset debug counter
   if (debugCounter >= DEBUG_INTERVAL) {
     debugCounter = 0;
@@ -950,6 +1276,27 @@ function animate(): void {
 
   // Update fog plane based on camera view
   updateFogPlane(camera);
+
+  // Update balloon position to follow camera
+  if (balloon) {
+    const balloonHeight = parseInt(balloonHeightSlider.value);
+    const balloonDistance = parseInt(balloonDistanceSlider.value);
+
+    // Position balloon in front of the camera
+    const cameraDirection = new THREE.Vector3();
+    camera.getWorldDirection(cameraDirection);
+
+    // Place balloon at specified distance in front of the camera
+    balloon.position.x =
+      camera.position.x + cameraDirection.x * balloonDistance;
+    balloon.position.z =
+      camera.position.z + cameraDirection.z * balloonDistance;
+    balloon.position.y = camera.position.y + balloonHeight; // Offset above camera
+
+    // Debug balloon position and values (uncomment to troubleshoot)
+    // console.log(`Balloon: (${balloon.position.x.toFixed(2)}, ${balloon.position.y.toFixed(2)}, ${balloon.position.z.toFixed(2)})`);
+    // console.log(`Height: ${balloonHeight}, Distance: ${balloonDistance}, Scale: ${balloon.scale.x.toFixed(2)}`);
+  }
 
   // Rotate the cube
   cube.rotation.x += 0.01;

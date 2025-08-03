@@ -24,6 +24,43 @@
         color: white;
         font-family: Arial, sans-serif;
         z-index: 1000;
+        display: flex;
+        gap: 20px;
+        max-height: calc(100vh - 40px);
+        overflow-y: auto;
+        overflow-x: hidden;
+      }
+      .controls-column {
+        min-width: 250px;
+      }
+      .controls-column h3 {
+        margin: 15px 0 10px 0;
+        color: #ffff00;
+        font-size: 14px;
+        border-bottom: 1px solid #444;
+        padding-bottom: 5px;
+      }
+      .controls-column h3:first-child {
+        margin-top: 0;
+      }
+
+      /* Custom scrollbar styling */
+      .controls::-webkit-scrollbar {
+        width: 8px;
+      }
+
+      .controls::-webkit-scrollbar-track {
+        background: rgba(0, 0, 0, 0.3);
+        border-radius: 4px;
+      }
+
+      .controls::-webkit-scrollbar-thumb {
+        background: rgba(255, 255, 255, 0.3);
+        border-radius: 4px;
+      }
+
+      .controls::-webkit-scrollbar-thumb:hover {
+        background: rgba(255, 255, 255, 0.5);
       }
       .slider-container {
         margin: 10px 0;
@@ -94,121 +131,275 @@
       <div class="debug-line" id="debug-experience">Experience: INACTIVE</div>
       <div class="debug-line" id="debug-vertical">Vertical: NONE</div>
       <div class="debug-line" id="debug-pause">Pause: NO</div>
+      <div class="debug-line" id="balloon-status">Balloon: LOADING...</div>
     </div>
     <div class="controls">
-      <div class="slider-container">
-        <label for="rotation-slider">Gradient Rotation</label>
-        <input
-          type="range"
-          id="rotation-slider"
-          min="0"
-          max="6.28"
-          step="0.1"
-          value="0"
-        />
-        <div class="value-display">
-          <span id="rotation-value">0.0</span> radians (<span
-            id="rotation-degrees"
-            >0°</span
-          >)
+      <div class="controls-column">
+        <h3>Background & Stars</h3>
+        <div class="slider-container">
+          <label for="rotation-slider">Gradient Rotation</label>
+          <input
+            type="range"
+            id="rotation-slider"
+            min="0"
+            max="6.28"
+            step="0.1"
+            value="0"
+          />
+          <div class="value-display">
+            <span id="rotation-value">0.0</span> radians (<span
+              id="rotation-degrees"
+              >0°</span
+            >)
+          </div>
+        </div>
+        <div class="slider-container">
+          <label for="star-min-size-slider">Star Min Size</label>
+          <input
+            type="range"
+            id="star-min-size-slider"
+            min="1"
+            max="20"
+            step="0.5"
+            value="5"
+          />
+          <div class="value-display">
+            <span id="star-min-size-value">15</span>
+          </div>
+        </div>
+        <div class="slider-container">
+          <label for="star-max-size-slider">Star Max Size</label>
+          <input
+            type="range"
+            id="star-max-size-slider"
+            min="5"
+            max="40"
+            step="0.5"
+            value="15"
+          />
+          <div class="value-display">
+            <span id="star-max-size-value">25</span>
+          </div>
+        </div>
+        <div class="slider-container">
+          <label for="star-fade-offset-slider">Star Fade Offset</label>
+          <input
+            type="range"
+            id="star-fade-offset-slider"
+            min="0"
+            max="1"
+            step="0.01"
+            value="0.1"
+          />
+          <div class="value-display">
+            <span id="star-fade-offset-value">0.1</span>
+          </div>
+        </div>
+
+        <h3>Fog System</h3>
+        <div class="slider-container">
+          <label for="fog-distance-slider">Fog Depth</label>
+          <input
+            type="range"
+            id="fog-distance-slider"
+            min="10"
+            max="200"
+            step="5"
+            value="200"
+          />
+          <div class="value-display">
+            <span id="fog-distance-value">200</span> units
+          </div>
+        </div>
+        <div class="slider-container">
+          <label for="fog-start-distance-slider">Fog Start Distance</label>
+          <input
+            type="range"
+            id="fog-start-distance-slider"
+            min="5"
+            max="500"
+            step="10"
+            value="45"
+          />
+          <div class="value-display">
+            <span id="fog-start-distance-value">45</span> units
+          </div>
+        </div>
+        <div class="slider-container">
+          <label for="fog-end-distance-slider">Fog End Distance</label>
+          <input
+            type="range"
+            id="fog-end-distance-slider"
+            min="100"
+            max="1500"
+            step="50"
+            value="1500"
+          />
+          <div class="value-display">
+            <span id="fog-end-distance-value">1500</span> units
+          </div>
+        </div>
+        <div class="slider-container">
+          <label for="fog-height-slider">Fog Height</label>
+          <input
+            type="range"
+            id="fog-height-slider"
+            min="0"
+            max="500"
+            step="10"
+            value="180"
+          />
+          <div class="value-display">
+            <span id="fog-height-value">180</span> units
+          </div>
         </div>
       </div>
-      <div class="slider-container">
-        <label for="star-min-size-slider">Star Min Size</label>
-        <input
-          type="range"
-          id="star-min-size-slider"
-          min="1"
-          max="20"
-          step="0.5"
-          value="5"
-        />
-        <div class="value-display">
-          <span id="star-min-size-value">15</span>
+
+      <div class="controls-column">
+        <h3>Mountains</h3>
+        <div class="slider-container">
+          <label for="mountain-count-slider">Mountain Segments</label>
+          <input
+            type="range"
+            id="mountain-count-slider"
+            min="8"
+            max="32"
+            step="1"
+            value="26"
+          />
+          <div class="value-display">
+            <span id="mountain-count-value">26</span>
+          </div>
         </div>
-      </div>
-      <div class="slider-container">
-        <label for="star-max-size-slider">Star Max Size</label>
-        <input
-          type="range"
-          id="star-max-size-slider"
-          min="5"
-          max="40"
-          step="0.5"
-          value="15"
-        />
-        <div class="value-display">
-          <span id="star-max-size-value">25</span>
+        <div class="slider-container">
+          <label for="mountain-distance-slider">Mountain Distance</label>
+          <input
+            type="range"
+            id="mountain-distance-slider"
+            min="400"
+            max="1000"
+            step="50"
+            value="1000"
+          />
+          <div class="value-display">
+            <span id="mountain-distance-value">1000</span> units
+          </div>
         </div>
-      </div>
-      <div class="slider-container">
-        <label for="star-fade-offset-slider">Star Fade Offset</label>
-        <input
-          type="range"
-          id="star-fade-offset-slider"
-          min="0"
-          max="1"
-          step="0.01"
-          value="0.1"
-        />
-        <div class="value-display">
-          <span id="star-fade-offset-value">0.1</span>
+        <div class="slider-container">
+          <label for="mountain-height-slider">Mountain Height</label>
+          <input
+            type="range"
+            id="mountain-height-slider"
+            min="20"
+            max="200"
+            step="10"
+            value="160"
+          />
+          <div class="value-display">
+            <span id="mountain-height-value">160</span> units
+          </div>
         </div>
-      </div>
-      <div class="slider-container">
-        <label for="fog-distance-slider">Fog Depth</label>
-        <input
-          type="range"
-          id="fog-distance-slider"
-          min="10"
-          max="200"
-          step="5"
-          value="200"
-        />
-        <div class="value-display">
-          <span id="fog-distance-value">200</span> units
+        <div class="slider-container">
+          <label for="ground-distance-slider">Ground Distance</label>
+          <input
+            type="range"
+            id="ground-distance-slider"
+            min="400"
+            max="1200"
+            step="50"
+            value="900"
+          />
+          <div class="value-display">
+            <span id="ground-distance-value">900</span> units
+          </div>
         </div>
-      </div>
-      <div class="slider-container">
-        <label for="fog-start-distance-slider">Fog Start Distance</label>
-        <input
-          type="range"
-          id="fog-start-distance-slider"
-          min="5"
-          max="500"
-          step="10"
-          value="45"
-        />
-        <div class="value-display">
-          <span id="fog-start-distance-value">45</span> units
+        <div class="slider-container">
+          <label for="mountain-position-slider">Mountain Position</label>
+          <input
+            type="range"
+            id="mountain-position-slider"
+            min="-100"
+            max="50"
+            step="5"
+            value="-75"
+          />
+          <div class="value-display">
+            <span id="mountain-position-value">-75</span> units
+          </div>
         </div>
-      </div>
-      <div class="slider-container">
-        <label for="fog-end-distance-slider">Fog End Distance</label>
-        <input
-          type="range"
-          id="fog-end-distance-slider"
-          min="100"
-          max="1500"
-          step="50"
-          value="1500"
-        />
-        <div class="value-display">
-          <span id="fog-end-distance-value">1500</span> units
+
+        <h3>Balloon</h3>
+        <div class="slider-container">
+          <label for="balloon-height-slider">Balloon Height</label>
+          <input
+            type="range"
+            id="balloon-height-slider"
+            min="-50"
+            max="200"
+            step="5"
+            value="-5"
+          />
+          <div class="value-display">
+            <span id="balloon-height-value">-5</span> units
+          </div>
         </div>
-      </div>
-      <div class="slider-container">
-        <label for="fog-height-slider">Fog Height</label>
-        <input
-          type="range"
-          id="fog-height-slider"
-          min="0"
-          max="500"
-          step="10"
-          value="180"
-        />
-        <div class="value-display">
-          <span id="fog-height-value">180</span> units
+        <div class="slider-container">
+          <label for="balloon-scale-slider">Balloon Scale</label>
+          <input
+            type="range"
+            id="balloon-scale-slider"
+            min="0.05"
+            max="5.0"
+            step="0.05"
+            value="2.5"
+          />
+          <div class="value-display">
+            <span id="balloon-scale-value">2.5</span>
+          </div>
+        </div>
+        <div class="slider-container">
+          <label for="balloon-distance-slider">Balloon Distance</label>
+          <input
+            type="range"
+            id="balloon-distance-slider"
+            min="0"
+            max="50"
+            step="1"
+            value="0"
+          />
+          <div class="value-display">
+            <span id="balloon-distance-value">0</span> units
+          </div>
+        </div>
+
+        <h3>Fog Color</h3>
+        <div class="slider-container">
+          <label for="fog-color-start-slider">Color Start Distance</label>
+          <input
+            type="range"
+            id="fog-color-start-slider"
+            min="0"
+            max="500"
+            step="10"
+            value="45"
+          />
+          <div class="value-display">
+            <span id="fog-color-start-value">45</span> units
+          </div>
+        </div>
+        <div class="slider-container">
+          <label for="fog-color-end-slider">Color End Distance</label>
+          <input
+            type="range"
+            id="fog-color-end-slider"
+            min="100"
+            max="1000"
+            step="25"
+            value="300"
+          />
+          <div class="value-display">
+            <span id="fog-color-end-value">300</span> units
+          </div>
         </div>
       </div>
     </div>
