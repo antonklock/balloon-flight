@@ -14,12 +14,18 @@ const globalPlane = new THREE.Plane(new THREE.Vector3(0, -1, 0), 180.0); // Init
 const fogPlane = new THREE.Vector4();
 let fogDepth = 200;
 let fogStartDistance = 45; // Distance from camera where fog starts
-let fogEndDistance = 1500; // Distance from camera where fog is fully opaque (covers sky sphere)
+let fogEndDistance = 950; // Distance from camera where fog is fully opaque (covers sky sphere)
 let fogCloseHue = 294; // Hue for close fog
-let fogDistantHue = 23; // Hue for distant fog
-let fogColor = hslToRgb(fogCloseHue, 80, 50); // 80% saturation, 50% lightness
-let fogColorStartDistance = 45; // Distance where color transition starts
-let fogColorEndDistance = 300; // Distance where color transition ends
+let fogDistantHue = 263; // Hue for distant fog
+let fogCloseBrightness = 33; // Brightness for close fog (0-100%)
+let fogDistantBrightness = 25; // Brightness for distant fog (0-100%)
+let fogColor = hslToRgb(fogCloseHue, 80, fogCloseBrightness); // 80% saturation, variable lightness
+let fogColorStartDistance = 0; // Distance where color transition starts
+let fogColorEndDistance = 425; // Distance where color transition ends
+let skyRingHeight = 37; // Height of the white ring as percentage of sky sphere
+let skyRingFalloff = 50; // Falloff distance as percentage of sky sphere
+let skyRingHue = 213; // Hue of the ring (0 = white, 360 = back to white)
+let skyRingBrightness = 44; // Brightness of the ring (0-100%)
 
 // Initialize fog colors immediately
 fogColor = hslToRgb(fogCloseHue, 80, 50); // 80% saturation, 50% lightness
@@ -290,7 +296,11 @@ function updateAllFoggyMaterials() {
     if (uniforms.fEndDistance) uniforms.fEndDistance.value = fogEndDistance;
     if (uniforms.fColor) uniforms.fColor.value = fogColor;
     if (uniforms.fColorDistant)
-      uniforms.fColorDistant.value = hslToRgb(fogDistantHue, 80, 50); // 80% saturation, 50% lightness
+      uniforms.fColorDistant.value = hslToRgb(
+        fogDistantHue,
+        80,
+        fogDistantBrightness
+      );
     if (uniforms.fColorStartDistance)
       uniforms.fColorStartDistance.value = fogColorStartDistance;
     if (uniforms.fColorEndDistance)
@@ -546,8 +556,8 @@ fogCloseHueSlider.addEventListener("input", (event) => {
   fogCloseHue = value;
   console.log("Fog close hue changed to:", value);
 
-  // Update fog color based on new hue
-  fogColor = hslToRgb(fogCloseHue, 80, 50); // 80% saturation, 50% lightness
+  // Update fog color based on new hue and brightness
+  fogColor = hslToRgb(fogCloseHue, 80, fogCloseBrightness);
 
   // Update all foggy materials with new color
   updateAllFoggyMaterials();
@@ -571,6 +581,133 @@ fogDistantHueSlider.addEventListener("input", (event) => {
   updateAllFoggyMaterials();
 });
 
+// Setup fog close brightness slider
+const fogCloseBrightnessSlider = document.getElementById(
+  "fog-close-brightness-slider"
+) as HTMLInputElement;
+const fogCloseBrightnessValue = document.getElementById(
+  "fog-close-brightness-value"
+) as HTMLSpanElement;
+
+fogCloseBrightnessSlider.addEventListener("input", (event) => {
+  const value = parseInt((event.target as HTMLInputElement).value);
+  fogCloseBrightnessValue.textContent = value.toString();
+  fogCloseBrightness = value;
+  console.log("Fog close brightness changed to:", value);
+
+  // Update fog color based on new brightness
+  fogColor = hslToRgb(fogCloseHue, 80, fogCloseBrightness);
+
+  // Update all foggy materials with new color
+  updateAllFoggyMaterials();
+});
+
+// Setup fog distant brightness slider
+const fogDistantBrightnessSlider = document.getElementById(
+  "fog-distant-brightness-slider"
+) as HTMLInputElement;
+const fogDistantBrightnessValue = document.getElementById(
+  "fog-distant-brightness-value"
+) as HTMLSpanElement;
+
+fogDistantBrightnessSlider.addEventListener("input", (event) => {
+  const value = parseInt((event.target as HTMLInputElement).value);
+  fogDistantBrightnessValue.textContent = value.toString();
+  fogDistantBrightness = value;
+  console.log("Fog distant brightness changed to:", value);
+
+  // Update all foggy materials with new distant color
+  updateAllFoggyMaterials();
+});
+
+// Setup sky ring height slider
+const skyRingHeightSlider = document.getElementById(
+  "sky-ring-height-slider"
+) as HTMLInputElement;
+const skyRingHeightValue = document.getElementById(
+  "sky-ring-height-value"
+) as HTMLSpanElement;
+
+skyRingHeightSlider.addEventListener("input", (event) => {
+  const value = parseInt((event.target as HTMLInputElement).value);
+  skyRingHeightValue.textContent = value.toString();
+  skyRingHeight = value;
+  console.log("Sky ring height changed to:", value);
+
+  // Update sky sphere material
+  if (skyMaterial && skyMaterial.uniforms) {
+    skyMaterial.uniforms.ringHeight.value = skyRingHeight / 100.0;
+  }
+});
+
+// Setup sky ring falloff slider
+const skyRingFalloffSlider = document.getElementById(
+  "sky-ring-falloff-slider"
+) as HTMLInputElement;
+const skyRingFalloffValue = document.getElementById(
+  "sky-ring-falloff-value"
+) as HTMLSpanElement;
+
+skyRingFalloffSlider.addEventListener("input", (event) => {
+  const value = parseInt((event.target as HTMLInputElement).value);
+  skyRingFalloffValue.textContent = value.toString();
+  skyRingFalloff = value;
+  console.log("Sky ring falloff changed to:", value);
+
+  // Update sky sphere material
+  if (skyMaterial && skyMaterial.uniforms) {
+    skyMaterial.uniforms.ringFalloff.value = skyRingFalloff / 100.0;
+  }
+});
+
+// Setup sky ring hue slider
+const skyRingHueSlider = document.getElementById(
+  "sky-ring-hue-slider"
+) as HTMLInputElement;
+const skyRingHueValue = document.getElementById(
+  "sky-ring-hue-value"
+) as HTMLSpanElement;
+
+skyRingHueSlider.addEventListener("input", (event) => {
+  const value = parseInt((event.target as HTMLInputElement).value);
+  skyRingHueValue.textContent = value.toString();
+  skyRingHue = value;
+  console.log("Sky ring hue changed to:", value);
+
+  // Update sky sphere material
+  if (skyMaterial && skyMaterial.uniforms) {
+    skyMaterial.uniforms.ringColor.value = hslToRgb(
+      skyRingHue,
+      80,
+      skyRingBrightness
+    );
+  }
+});
+
+// Setup sky ring brightness slider
+const skyRingBrightnessSlider = document.getElementById(
+  "sky-ring-brightness-slider"
+) as HTMLInputElement;
+const skyRingBrightnessValue = document.getElementById(
+  "sky-ring-brightness-value"
+) as HTMLSpanElement;
+
+skyRingBrightnessSlider.addEventListener("input", (event) => {
+  const value = parseInt((event.target as HTMLInputElement).value);
+  skyRingBrightnessValue.textContent = value.toString();
+  skyRingBrightness = value;
+  console.log("Sky ring brightness changed to:", value);
+
+  // Update sky sphere material
+  if (skyMaterial && skyMaterial.uniforms) {
+    skyMaterial.uniforms.ringColor.value = hslToRgb(
+      skyRingHue,
+      80,
+      skyRingBrightness
+    );
+  }
+});
+
 // Initialize fog slider values from JavaScript variables
 fogColorStartSlider.value = fogColorStartDistance.toString();
 fogColorStartValue.textContent = fogColorStartDistance.toString();
@@ -583,6 +720,31 @@ fogCloseHueValue.textContent = fogCloseHue.toString();
 
 fogDistantHueSlider.value = fogDistantHue.toString();
 fogDistantHueValue.textContent = fogDistantHue.toString();
+
+// Initialize fog brightness sliders
+fogCloseBrightnessSlider.value = fogCloseBrightness.toString();
+fogCloseBrightnessValue.textContent = fogCloseBrightness.toString();
+
+fogDistantBrightnessSlider.value = fogDistantBrightness.toString();
+fogDistantBrightnessValue.textContent = fogDistantBrightness.toString();
+
+// Initialize sky ring slider values
+skyRingHeightSlider.value = skyRingHeight.toString();
+skyRingHeightValue.textContent = skyRingHeight.toString();
+
+skyRingFalloffSlider.value = skyRingFalloff.toString();
+skyRingFalloffValue.textContent = skyRingFalloff.toString();
+
+// Initialize sky ring hue and brightness sliders
+skyRingHueSlider.value = skyRingHue.toString();
+skyRingHueValue.textContent = skyRingHue.toString();
+
+skyRingBrightnessSlider.value = skyRingBrightness.toString();
+skyRingBrightnessValue.textContent = skyRingBrightness.toString();
+
+// Initialize fog end distance slider
+fogEndDistanceSlider.value = fogEndDistance.toString();
+fogEndDistanceValue.textContent = fogEndDistance.toString();
 
 // Update fog materials with initial values
 updateAllFoggyMaterials();
@@ -1085,19 +1247,97 @@ scene.add(
   createTestCube(-70, 35, -130, parseInt(colors.yellow.replace("#", "0x")))
 ); // High, very far
 
-// Create simple sky sphere
+// Create sky sphere with equatorial ring
 const skyGeometry = new THREE.SphereGeometry(1000, 32, 32);
-const skyMaterial = getFoggyMaterial(
-  fogDepth,
-  fogColor,
-  parseInt(colors.deepBlue.replace("#", "0x")),
-  THREE.BackSide
-);
-// Make the sky material self-illuminating
-skyMaterial.emissive = new THREE.Color(colors.deepBlue);
-skyMaterial.emissiveIntensity = 0.3;
+const skyMaterial = new THREE.ShaderMaterial({
+  uniforms: {
+    ringHeight: { value: skyRingHeight / 100.0 },
+    ringFalloff: { value: skyRingFalloff / 100.0 },
+    skyColor: { value: new THREE.Color(colors.deepBlue) },
+    ringColor: { value: hslToRgb(skyRingHue, 80, skyRingBrightness) },
+    fogPlane: { value: fogPlane },
+    fogDepth: { value: fogDepth },
+    fogColor: { value: fogColor },
+    fogColorDistant: { value: hslToRgb(fogDistantHue, 80, 50) },
+    fogStartDistance: { value: fogStartDistance },
+    fogEndDistance: { value: fogEndDistance },
+    fogColorStartDistance: { value: fogColorStartDistance },
+    fogColorEndDistance: { value: fogColorEndDistance },
+  },
+  vertexShader: `
+    varying vec3 vWorldPosition;
+    varying vec3 vViewPosition;
+    varying vec3 vWorldNormal;
+    
+    void main() {
+      vWorldPosition = (modelMatrix * vec4(position, 1.0)).xyz;
+      vViewPosition = -(modelViewMatrix * vec4(position, 1.0)).xyz;
+      vWorldNormal = normalize((modelMatrix * vec4(normal, 0.0)).xyz);
+      gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+    }
+  `,
+  fragmentShader: `
+    uniform float ringHeight;
+    uniform float ringFalloff;
+    uniform vec3 skyColor;
+    uniform vec3 ringColor;
+    uniform vec4 fogPlane;
+    uniform float fogDepth;
+    uniform vec3 fogColor;
+    uniform vec3 fogColorDistant;
+    uniform float fogStartDistance;
+    uniform float fogEndDistance;
+    uniform float fogColorStartDistance;
+    uniform float fogColorEndDistance;
+    
+    varying vec3 vWorldPosition;
+    varying vec3 vViewPosition;
+    varying vec3 vWorldNormal;
+    
+    void main() {
+      // Calculate height factor (0 at equator, 1 at poles) using world space
+      float heightFactor = abs(vWorldNormal.y);
+      
+      // Create ring effect
+      float ringFactor = smoothstep(ringHeight - ringFalloff, ringHeight, heightFactor);
+      vec3 finalColor = mix(ringColor, skyColor, ringFactor);
+      
+      // Apply fog effect
+      float planeFog = 0.0;
+      float distanceFog = 0.0;
+      
+      float viewDistance = length(vViewPosition);
+      
+      // Distance fog: 0 at start distance, 1 at end distance, no fog beyond end distance
+      if (viewDistance <= fogStartDistance) {
+        distanceFog = 0.0; // No fog within start distance
+      } else if (viewDistance >= fogEndDistance) {
+        distanceFog = 0.0; // No fog beyond end distance (objects become visible again)
+      } else {
+        distanceFog = smoothstep(fogStartDistance, fogEndDistance, viewDistance);
+      }
+      
+      // Height fog
+      planeFog = smoothstep(0.0, -fogDepth, dot(vViewPosition, fogPlane.xyz) - fogPlane.w);
+      
+      float totalFog = max(distanceFog, planeFog);
+      
+      // Interpolate between close and distant fog colors
+      float colorBlendFactor = smoothstep(fogColorStartDistance, fogColorEndDistance, viewDistance);
+      vec3 fogColorBlended = mix(fogColor, fogColorDistant, colorBlendFactor);
+      
+      // Don't apply fog to the sky sphere itself
+      gl_FragColor = vec4(finalColor, 1.0);
+    }
+  `,
+  side: THREE.BackSide,
+});
+
 const skySphere = new THREE.Mesh(skyGeometry, skyMaterial);
 scene.add(skySphere);
+
+// Add sky material to foggy materials for updates
+foggyMaterials.push({ material: skyMaterial, uniforms: skyMaterial.uniforms });
 
 // Add white dots (stars) to the sky
 const starGeometry = new THREE.SphereGeometry(1, 8, 8);

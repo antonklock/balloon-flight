@@ -100,7 +100,7 @@ export class GradientMaterial {
           gl_FragColor = vec4(gradientColor + starColor, 1.0);
         }
       `,
-      fog: true,
+      fog: false,
     });
 
     // Create a large sphere for the gradient background
